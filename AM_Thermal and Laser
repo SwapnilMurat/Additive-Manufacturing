@@ -1,0 +1,35 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+thermal_df = pd.read_csv("thermal1_scaled.csv")
+laser_df = pd.read_csv("laser1.csv")
+
+thermal_summary = thermal_df.describe()
+laser_summary = laser_df.describe()
+
+fig, axs = plt.subplots(2, 2, figsize=(14, 10))
+
+axs[0, 0].scatter(thermal_df['x'], thermal_df['y'], s=0.5, alpha=0.5, c=thermal_df['T'], cmap='hot')
+axs[0, 0].set_title('Thermal Data - XY Distribution (Colored by Temperature)')
+axs[0, 0].set_xlabel('x')
+axs[0, 0].set_ylabel('y')
+axs[0, 0].axis('equal')
+
+axs[0, 1].scatter(laser_df['x'], laser_df['y'], s=0.5, alpha=0.5, color='blue')
+axs[0, 1].set_title('Laser Scan Path - XY Distribution')
+axs[0, 1].set_xlabel('x')
+axs[0, 1].set_ylabel('y')
+axs[0, 1].axis('equal')
+
+axs[1, 0].hist(thermal_df['T'], bins=100, color='orange', alpha=0.7)
+axs[1, 0].set_title('Histogram of Thermal Temperatures')
+axs[1, 0].set_xlabel('Temperature (°C)')
+axs[1, 0].set_ylabel('Frequency')
+
+axs[1, 1].hist(laser_df['scan_type'], bins=10, color='green', alpha=0.7)
+axs[1, 1].set_title('Histogram of Scan Types')
+axs[1, 1].set_xlabel('Scan Type')
+axs[1, 1].set_ylabel('Frequency')
+
+plt.tight_layout()
+plt.show()
