@@ -1,0 +1,41 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+thermal_df = pd.read_csv("thermal1_scaled.csv")
+laser_df = pd.read_csv("laser1.csv")
+reference_df = pd.read_csv("laser1_with_thermal2.csv")
+
+from scipy.spatial import cKDTree
+thermal_tree = cKDTree(thermal_df[['x', 'y', 'z']].values)
+_, nearest_indices = thermal_tree.query(laser_df[['x', 'y', 'z']].values, k=1)
+laser_df['T_mapped'] = thermal_df.iloc[nearest_indices]['T'].values
+
+laser_df['T_reference'] = reference_df['T']
+
+laser_df['abs_error'] = np.abs(laser_df['T_reference'] - laser_df['T_mapped'])
+
+import matplotlib.pyplot as plt
+plt.figure(figsize=(8, 4))
+plt.hist(laser_df['abs_error'], bins=100, color='red')
+plt.title("Absolute Temperature Mapping Error")
+plt.xlabel("Error (°C)")
+plt.ylabel("Count")
+plt.grid(True)
+plt.show()
+
+threshold = 10.0
+defects = laser_df[laser_df['abs_error'] > threshold]
+
+plt.figure(figsize=(6, 6))
+plt.scatter(defects['x'], defects['y'], s=1, color='black', alpha=0.5)
+plt.title("Defective Regions (abs_error > 10°C)")
+plt.xlabel("x")
+plt.ylabel("y")
+plt.axis('equal')
+plt.grid(True)
+plt.show()
+
+print(f"Mean Absolute Error: {laser_df['abs_error'].mean():.2f} °C")
+print(f"Max Error: {laser_df['abs_error'].max():.2f} °C")
+print(f"Defective Points: {len(defects)}")
