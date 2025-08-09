@@ -1,0 +1,46 @@
+import pandas as pd
+import numpy as np
+from scipy.spatial import cKDTree
+import matplotlib.pyplot as plt
+
+thermal_df = pd.read_csv("thermal1_scaled.csv", nrows=10000)
+laser_df = pd.read_csv("laser1.csv", nrows=10000)
+
+
+laser_tree = cKDTree(laser_df[['x', 'y']].values)
+
+
+thermal_xy = thermal_df[['x', 'y']].values
+distances, indices = laser_tree.query(thermal_xy, k=1)
+
+
+nearest_laser_points = laser_df.iloc[indices][['x', 'y']].values
+offsets = nearest_laser_points - thermal_xy
+mean_translation = np.mean(offsets, axis=0)
+print(f"Estimated XY translation vector: {mean_translation}")
+
+
+thermal_df_aligned = thermal_df.copy()
+thermal_df_aligned['x'] += mean_translation[0]
+thermal_df_aligned['y'] += mean_translation[1]
+
+
+plt.figure(figsize=(12, 6))
+
+plt.subplot(1, 2, 1)
+plt.scatter(thermal_df['x'], thermal_df['y'], s=1, label='Thermal (Original)', alpha=0.5)
+plt.scatter(laser_df['x'], laser_df['y'], s=1, label='Laser', alpha=0.5)
+plt.title("Before Alignment")
+plt.legend()
+plt.axis('equal')
+
+
+plt.subplot(1, 2, 2)
+plt.scatter(thermal_df_aligned['x'], thermal_df_aligned['y'], s=1, label='Thermal (Aligned)', alpha=0.5)
+plt.scatter(laser_df['x'], laser_df['y'], s=1, label='Laser', alpha=0.5)
+plt.title("After Alignment")
+plt.legend()
+plt.axis('equal')
+
+plt.tight_layout()
+plt.show()
