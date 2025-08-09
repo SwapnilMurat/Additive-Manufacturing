@@ -1,0 +1,85 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.spatial import cKDTree
+from sklearn.cluster import DBSCAN
+from sklearn.preprocessing import StandardScaler
+
+thermal_df = pd.read_csv('thermal1_scaled.csv')
+laser_df = pd.read_csv('laser1.csv')
+registered_df = pd.read_csv('laser1_with_thermal2.csv')
+
+
+def align_coordinates(thermal, laser):
+    thermal_center = thermal[['x', 'y']].mean()
+    laser_center = laser[['x', 'y']].mean()
+    shift = laser_center - thermal_center
+    thermal[['x', 'y']] += shift
+    return thermal
+
+thermal_aligned = align_coordinates(thermal_df.copy(), laser_df)
+
+
+
+def map_temperature_layerwise(thermal, laser):
+    mapped_data = []
+    for z in laser['z'].unique():
+        laser_layer = laser[laser['z'] == z]
+        thermal_layer = thermal[thermal['z'] == z]
+
+        if thermal_layer.empty or laser_layer.empty:
+            continue
+
+        tree = cKDTree(thermal_layer[['x', 'y']].values)
+        dist, idx = tree.query(laser_layer[['x', 'y']].values, k=1)
+        laser_layer = laser_layer.copy()
+        laser_layer['T'] = thermal_layer.iloc[idx]['T'].values
+        mapped_data.append(laser_layer)
+
+    return pd.concat(mapped_data, ignore_index=True)
+
+laser_mapped = map_temperature_layerwise(thermal_aligned, laser_df)
+
+
+plt.figure(figsize=(12, 5))
+
+plt.subplot(1, 2, 1)
+plt.hist(laser_mapped['T'].dropna(), bins=50, alpha=0.7, color='skyblue')
+plt.title("Mapped Temperature (Layer-wise)")
+plt.xlabel("Temperature")
+plt.ylabel("Frequency")
+
+plt.subplot(1, 2, 2)
+plt.hist(registered_df['T'].dropna(), bins=50, alpha=0.7, color='orange')
+plt.title("Registered Temperature (Provided)")
+plt.xlabel("Temperature")
+plt.ylabel("Frequency")
+
+plt.tight_layout()
+plt.show()
+
+
+defect_df = laser_mapped.dropna(subset=['T'])
+
+threshold = defect_df['T'].mean() + 2 * defect_df['T'].std()
+anomalies = defect_df[defect_df['T'] > threshold].copy()
+
+
+scaler = StandardScaler()
+coords = scaler.fit_transform(anomalies[['x', 'y']])
+db = DBSCAN(eps=0.5, min_samples=10).fit(coords)
+anomalies['defect_cluster'] = db.labels_
+
+
+plt.figure(figsize=(8, 6))
+scatter = plt.scatter(anomalies['x'], anomalies['y'], c=anomalies['defect_cluster'], cmap='tab10', s=10)
+plt.colorbar(scatter, label='Defect Cluster ID')
+plt.title("Detected Defective Regions")
+plt.xlabel("X")
+plt.ylabel("Y")
+plt.grid(True)
+plt.show()
+
+
+anomalies.to_csv("defective_regions.csv", index=False)
+laser_mapped.to_csv("laser_with_mapped_temp.csv", index=False)
