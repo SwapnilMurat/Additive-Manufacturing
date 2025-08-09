@@ -1,0 +1,26 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+thermal_df = pd.read_csv('thermal1_scaled.csv')
+laser_df = pd.read_csv('laser1.csv')
+
+thermal_df.head(), laser_df.head()
+
+plt.figure(figsize=(10, 5))
+
+plt.subplot(1, 2, 1)
+plt.scatter(thermal_df['x'], thermal_df['y'], c=thermal_df['T'], cmap='hot', s=1)
+plt.title('Thermal Data')
+plt.xlabel('X')
+plt.ylabel('Y')
+plt.colorbar(label='Temperature')
+
+plt.subplot(1, 2, 2)
+plt.scatter(laser_df['x'], laser_df['y'], c=laser_df['scan_type'], cmap='viridis', s=1)
+plt.title('Laser Scan Path Data')
+plt.xlabel('X')
+plt.ylabel('Y')
+plt.colorbar(label='Scan Type')
+
+plt.tight_layout()
+plt.show()
